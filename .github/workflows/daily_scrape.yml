@@ -1,0 +1,36 @@
+name: Daily Car Scout
+
+# Trigger: Runs every day at 8:00 AM UTC (approx 3 AM Sudbury time)
+# OR manually when you click "Run workflow"
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape-listings:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the code
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      # 2. Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      # 3. Install Dependencies
+      # This looks for the requirements.txt inside the 'scraper' folder
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f scraper/requirements.txt ]; then pip install -r scraper/requirements.txt; fi
+
+      # 4. Run the Pipeline
+      - name: Run Scraper
+        run: |
+          cd scraper
+          python src/main.py
