@@ -2,51 +2,66 @@ import requests
 from bs4 import BeautifulSoup
 import sys
 import time
+import random
 
-# 1. CONSTANTS
-# We use a real browser User-Agent. 
-# "Sudbury Car Scout" processes 500+ listings[cite: 29], so we must look like a human, not a bot.
+# CONFIGURATION
+# use the specific Sudbury URL from AutoTrader Canada
+TARGET_URL = "https://www.autotrader.ca/cars/on/greater%20sudbury/?rcp=15&rcs=0&srt=39&prx=50&prv=Ontario&loc=Sudbury&hprc=True&wcp=True&inMarket=advancedSearch"
+
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Referer': 'https://www.google.com/'
 }
 
-def fetch_page(url):
-    """
-    Fetches HTML content with error handling.
-    This fulfills the "efficient error handling mechanisms" claim.
-    """
+def fetch_html(url):
     try:
-        print(f"[*] Connecting to: {url}")
-        # Timeout is crucial so the pipeline doesn't hang forever
-        response = requests.get(url, headers=HEADERS, timeout=15)
-        response.raise_for_status() 
+        time.sleep(random.uniform(2, 4))
+        print(f"[*] Fetching: {url}")
+        
+        response = requests.get(url, headers=HEADERS, timeout=30)
+        response.raise_for_status()
+        
+        if response.history:
+            print(f"[!] Warning: Redirected to {response.url}")
+            
         return response.text
-    except requests.exceptions.RequestException as e:
-        print(f"[!] Network Error: {e}")
+    except Exception as e:
+        print(f"[!] Error: {e}")
         return None
 
-def parse_test_data(html):
+def analyze_page_structure(html):
     """
-    Simple parser to verify BeautifulSoup is working before we target AutoTrader.
+    Analyzes the HTML to see if data is accessible via Requests.
     """
     soup = BeautifulSoup(html, 'html.parser')
-    title = soup.title.string if soup.title else "No Title"
-    return title
+    # 1. Check for the presence of a title
+    page_title = soup.title.string.strip() if soup.title else "No Title"
+    print(f"[*] Page Title: {page_title}")
+    
+    # 2. Look for elements that typically contain listing data
+    potential_listings = soup.find_all("div", class_=lambda x: x and "listing" in x)
+    
+    print(f"[*] Analysis: Found {len(potential_listings)} elements with 'listing' in the class name.")
+    
+    body_text = soup.get_text()[:500].replace('\n', ' ')
+    print(f"[*] Page Snippet: {body_text}...")
+    
+    return len(potential_listings) > 0
 
 def main():
-    # PHASE 1: Connection Test
-    # We test with a static site first to prove the pipeline works.
-    target_url = "https://example.com"
+    print("--- SUDBURY CAR SCOUT: PROBE MISSION ---")
+    html = fetch_html(TARGET_URL)
     
-    html = fetch_page(target_url)
-    
-    if html:
-        print("[*] Page fetched successfully.")
-        data = parse_test_data(html)
-        print(f"[+] Extracted Title: {data}")
-    else:
-        print("[!] Pipeline failed.")
+    if not html:
         sys.exit(1)
+        
+    success = analyze_page_structure(html)
+    
+    if success:
+        print("[+] SUCCESS: The page seems to have listing data accessible.")
+    else:
+        print("[-] WARNING: No listing elements found. The page might be strictly JavaScript.")
 
 if __name__ == "__main__":
     main()
