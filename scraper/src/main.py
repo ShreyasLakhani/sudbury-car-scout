@@ -1,67 +1,102 @@
-import requests
-from bs4 import BeautifulSoup
-import sys
 import time
-import random
+import json
+import re
+import undetected_chromedriver as uc
+from selenium.webdriver.common.by import By
+from bs4 import BeautifulSoup
+import os
 
 # CONFIGURATION
-# use the specific Sudbury URL from AutoTrader Canada
 TARGET_URL = "https://www.autotrader.ca/cars/on/greater%20sudbury/?rcp=15&rcs=0&srt=39&prx=50&prv=Ontario&loc=Sudbury&hprc=True&wcp=True&inMarket=advancedSearch"
 
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-    'Referer': 'https://www.google.com/'
-}
+def setup_driver():
+    options = uc.ChromeOptions() 
+    driver = uc.Chrome(options=options, use_subprocess=True) 
+    return driver
 
-def fetch_html(url):
-    try:
-        time.sleep(random.uniform(2, 4))
-        print(f"[*] Fetching: {url}")
-        
-        response = requests.get(url, headers=HEADERS, timeout=30)
-        response.raise_for_status()
-        
-        if response.history:
-            print(f"[!] Warning: Redirected to {response.url}")
-            
-        return response.text
-    except Exception as e:
-        print(f"[!] Error: {e}")
-        return None
+def parse_listing(card_soup):
+    data = {}
+    
+    # Title
+    title_tag = card_soup.find('span', class_='result-title')
+    if not title_tag:
+        title_tag = card_soup.find('h2')
+    data['title'] = title_tag.get_text(strip=True) if title_tag else "N/A"
 
-def analyze_page_structure(html):
-    """
-    Analyzes the HTML to see if data is accessible via Requests.
-    """
-    soup = BeautifulSoup(html, 'html.parser')
-    # 1. Check for the presence of a title
-    page_title = soup.title.string.strip() if soup.title else "No Title"
-    print(f"[*] Page Title: {page_title}")
+    # Regex Parsing
+    text_blob = card_soup.get_text(separator=' ', strip=True)
     
-    # 2. Look for elements that typically contain listing data
-    potential_listings = soup.find_all("div", class_=lambda x: x and "listing" in x)
+    # Price
+    price_match = re.search(r'\$[0-9,]+', text_blob)
+    data['price'] = price_match.group(0) if price_match else "N/A"
+
+    # Mileage
+    odo_match = re.search(r'(\d{1,3}(?:,\d{3})*|\d+)\s*km', text_blob)
+    data['mileage'] = odo_match.group(0) if odo_match else "N/A"
     
-    print(f"[*] Analysis: Found {len(potential_listings)} elements with 'listing' in the class name.")
+    # Link
+    link_tag = card_soup.find('a', href=True)
+    data['link'] = "https://www.autotrader.ca" + link_tag['href'] if link_tag else "N/A"
     
-    body_text = soup.get_text()[:500].replace('\n', ' ')
-    print(f"[*] Page Snippet: {body_text}...")
-    
-    return len(potential_listings) > 0
+    return data
 
 def main():
-    print("--- SUDBURY CAR SCOUT: PROBE MISSION ---")
-    html = fetch_html(TARGET_URL)
+    print("--- SUDBURY CAR SCOUT: LIVE EXTRACTION ---")
+    driver = setup_driver()
     
-    if not html:
-        sys.exit(1)
+    try:
+        driver.get(TARGET_URL)
         
-    success = analyze_page_structure(html)
-    
-    if success:
-        print("[+] SUCCESS: The page seems to have listing data accessible.")
-    else:
-        print("[-] WARNING: No listing elements found. The page might be strictly JavaScript.")
+        # === HUMAN HANDOVER ===
+        print("\n" + "!"*30)
+        print("WAITING FOR HUMAN: Solve CAPTCHA if needed.")
+        print("Press ENTER once cars are visible.")
+        print("!"*30 + "\n")
+        input("Press Enter to continue...")
+        # ======================
+
+        print("[*] Scrolling...")
+        driver.execute_script("window.scrollTo(0, 1000);")
+        time.sleep(3) 
+
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        listings = soup.find_all("div", class_=lambda x: x and "listing" in x)
+        
+        valid_listings = [l for l in listings if len(l.get_text(strip=True)) > 50]
+        
+        print(f"[*] Processing {len(valid_listings)} containers...")
+        
+        results = []
+        seen_titles = set() # For deduplication
+
+        for card in valid_listings:
+            car = parse_listing(card)
+            
+            # QUALITY CONTROL FILTERS:
+            # 1. Must have a valid Title
+            # 2. Must have a valid Price (removes the N/A duplicates)
+            # 3. Must not be a duplicate we already saved
+            
+            if car['title'] != "N/A" and car['price'] != "N/A":
+                unique_id = f"{car['title']}-{car['price']}"
+                
+                if unique_id not in seen_titles:
+                    results.append(car)
+                    seen_titles.add(unique_id)
+                    print(f" [+] {car['title']} | {car['price']} | {car['mileage']}")
+
+        # Save to JSON
+        with open("cars.json", "w") as f:
+            json.dump(results, f, indent=2)
+            print(f"\n[SUCCESS] Saved {len(results)} unique vehicles to cars.json")
+            
+    except Exception as e:
+        print(f"[!] Error: {e}")
+    finally:
+        try:
+            driver.quit()
+        except:
+            pass
 
 if __name__ == "__main__":
     main()
