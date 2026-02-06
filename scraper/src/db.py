@@ -39,11 +39,27 @@ def init_db():
 def load_data():
     conn = get_db()
     cur = conn.cursor()
-    
+
+    # Try multiple possible paths for cars.json
+    possible_paths = [
+        os.path.join(os.path.dirname(__file__), "..", "cars.json"),  # scraper/cars.json
+        os.path.join(os.path.dirname(__file__), "..", "..", "cars.json"),  # root/cars.json
+        "cars.json"  # current directory
+    ]
+
+    cars_file = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            cars_file = path
+            break
+
     try:
-        with open("cars.json", "r") as f:
+        if not cars_file:
+            raise FileNotFoundError("cars.json not found in any expected location")
+
+        with open(cars_file, "r", encoding="utf-8") as f:
             cars = json.load(f)
-            
+
         new_count = 0
         for car in cars:
             cur.execute("SELECT id FROM cars WHERE link = %s", (car['link'],))
@@ -53,12 +69,13 @@ def load_data():
                     VALUES (%s, %s, %s, %s)
                 """, (car['title'], car['price'], car['mileage'], car['link']))
                 new_count += 1
-        
+
         conn.commit()
-        print(f"✅ Database Sync: Added {new_count} new listings.")
-        
-    except FileNotFoundError:
-        print("⚠️ No cars.json found. Run the scraper first.")
+        print(f"Database Sync: Added {new_count} new listings.")
+
+    except FileNotFoundError as e:
+        print(f"Warning: {str(e)}")
+        print("Run the scraper first to generate cars.json")
     finally:
         conn.close()
 

@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from api import app 
+from scraper.src.api import app
 
 client = TestClient(app)
 

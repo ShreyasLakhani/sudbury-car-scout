@@ -12,8 +12,11 @@ function App() {
   const [targetPrice, setTargetPrice] = useState(20000)
   const [keyword, setKeyword] = useState('')
 
+  // Use environment variable for API URL, fallback to localhost
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
   useEffect(() => {
-    fetch('http://localhost:8000/cars')
+    fetch(`${API_URL}/cars`)
       .then((res) => res.json())
       .then((data) => {
         setCars(data)
@@ -29,16 +32,24 @@ function App() {
         setChartData(validForChart)
         setLoading(false)
       })
-  }, [])
+      .catch((error) => {
+        console.error('Error fetching cars:', error)
+        setLoading(false)
+      })
+  }, [API_URL])
 
   const handleSetAlert = () => {
-    fetch('http://localhost:8000/alert', {
+    fetch(`${API_URL}/alert`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, target_price: targetPrice, keyword })
     }).then(() => {
         alert("Alert Set! We'll email you if a match appears.")
         close()
+    })
+    .catch((error) => {
+        console.error('Error setting alert:', error)
+        alert('Failed to set alert. Please try again.')
     })
   }
 
