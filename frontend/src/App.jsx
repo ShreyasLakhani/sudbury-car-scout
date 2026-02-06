@@ -17,6 +17,7 @@ function App() {
       .then((res) => res.json())
       .then((data) => {
         setCars(data)
+        // Prepare data for the chart
         const validForChart = data
           .map(car => ({
             ...car,
@@ -28,10 +29,6 @@ function App() {
         setChartData(validForChart)
         setLoading(false)
       })
-      .catch((error) => {
-        console.error("Error:", error)
-        setLoading(false)
-      })
   }, [])
 
   const handleSetAlert = () => {
@@ -40,7 +37,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, target_price: targetPrice, keyword })
     }).then(() => {
-        alert("Alert Set! We will email you if a price drops.")
+        alert("Alert Set! We'll email you if a match appears.")
         close()
     })
   }
@@ -52,11 +49,9 @@ function App() {
           <Title order={1}>Sudbury Car Scout AI</Title>
           <Text c="dimmed">Machine Learning Market Analysis • {cars.length} Listings</Text>
         </div>
-        <Group>
-            <Button onClick={open} variant="gradient" gradient={{ from: 'indigo', to: 'cyan' }}>
-                🔔 Set Price Alert
-            </Button>
-        </Group>
+        <Button onClick={open} variant="gradient" gradient={{ from: 'indigo', to: 'cyan' }}>
+            🔔 Set Price Alert
+        </Button>
       </Group>
 
       <LoadingOverlay visible={loading} />
@@ -87,8 +82,6 @@ function App() {
         {cars.map((car, index) => (
           <Grid.Col key={index} span={{ base: 12, md: 6, lg: 4 }}>
             <Card shadow="sm" padding="lg" radius="md" withBorder h="100%">
-              {/* Image Removed */}
-              
               <Group justify="space-between" mt="md" mb="xs">
                 <Badge color="blue" variant="light">{car.price}</Badge>
                 {car.deal_rating && <Badge color={car.deal_color} variant="filled">{car.deal_rating}</Badge>}
