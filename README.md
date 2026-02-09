@@ -1,6 +1,17 @@
 # Sudbury Car Scout AI 🚗
 
+![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.128.0-green.svg)
+![React](https://img.shields.io/badge/React-18+-61dafb.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+
 AI-powered car listing aggregator and market analysis tool for Sudbury, Ontario. Scrapes AutoTrader listings, performs machine learning-based price analysis, and provides real-time market insights.
+
+## 🌐 Live Demo
+
+- **Frontend**: https://sudbury-car-scout-nnmp.vercel.app
+- **API Endpoint**: https://sudbury-car-scout-production.up.railway.app/cars
+- **Status**: ✅ Production Ready
 
 ## Features
 
@@ -9,6 +20,27 @@ AI-powered car listing aggregator and market analysis tool for Sudbury, Ontario.
 - **Market Visualization**: Interactive scatter plots showing price vs mileage correlation
 - **Price Alerts**: Set notifications for specific cars below target prices
 - **Deal Detection**: Automatic classification of listings (Great Deal, Fair Price, Overpriced)
+
+## ⚡ Quick Start
+
+**Just want to see it?** Visit the [live demo](https://sudbury-car-scout-nnmp.vercel.app)
+
+**Want to run locally?**
+
+```bash
+# 1. Backend
+cd scraper
+pip install -r requirements.txt
+# Create .env file with your DATABASE_URL
+python src/api.py
+
+# 2. Frontend (new terminal)
+cd frontend
+npm install
+npm run dev
+
+# 3. Visit http://localhost:5173
+```
 
 ## Tech Stack
 
@@ -64,7 +96,7 @@ sudbury-car-scout/
 ### 1. Clone Repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/yourusername/sudbury-car-scout.git
 cd sudbury-car-scout
 ```
 
@@ -187,9 +219,8 @@ Create a price alert
 ## Testing
 
 ```bash
-# Run backend tests
-cd tests
-pytest test_api.py -v
+# Run backend tests (from project root)
+pytest tests/test_api.py -v
 
 # Run with coverage
 pytest --cov=scraper.src tests/
@@ -212,21 +243,37 @@ docker-compose up -d
 
 ### Option 3: Cloud Deployment
 
-**Backend (API):**
-- **Recommended:** Railway, Render, or Fly.io
-- Set `DATABASE_URL` environment variable
-- Set `ALLOWED_ORIGINS` to your frontend URL
-- Deploy command: `uvicorn src.api:app --host 0.0.0.0 --port $PORT`
+**Current Production Stack:**
+- **Backend**: Railway (https://sudbury-car-scout-production.up.railway.app)
+- **Frontend**: Vercel (https://sudbury-car-scout-nnmp.vercel.app)
+- **Database**: Neon.tech PostgreSQL
 
-**Frontend:**
-- **Recommended:** Vercel or Netlify
-- Set `VITE_API_URL` to your backend URL
-- Build command: `npm run build`
-- Publish directory: `dist`
+**To deploy your own instance:**
 
-**Database:**
-- **Recommended:** Neon.tech (free tier available)
-- Alternative: Railway PostgreSQL, Render PostgreSQL
+**Backend (Railway):**
+1. Create a new project on [Railway](https://railway.app)
+2. Connect your GitHub repository
+3. Set root directory to `scraper`
+4. Add environment variables:
+   - `DATABASE_URL`: Your Neon.tech PostgreSQL connection string
+   - `ALLOWED_ORIGINS`: Your Vercel frontend URL (e.g., `https://your-app.vercel.app`)
+5. Deploy command: `uvicorn src.api:app --host 0.0.0.0 --port $PORT`
+6. Railway will auto-deploy on every git push
+
+**Frontend (Vercel):**
+1. Import your GitHub repo to [Vercel](https://vercel.com)
+2. Set root directory to `frontend`
+3. Add environment variable:
+   - `VITE_API_URL`: Your Railway backend URL
+4. Build command: `npm run build`
+5. Output directory: `dist`
+6. Auto-deploys on git push to main branch
+
+**Database (Neon.tech):**
+1. Create free account at [Neon.tech](https://neon.tech)
+2. Create a new PostgreSQL database
+3. Copy connection string (format: `postgresql://user:pass@host:5432/db?sslmode=require`)
+4. Run `python src/db.py` to initialize tables
 
 ## Database Schema
 
@@ -302,6 +349,35 @@ VITE_API_URL=http://localhost:8000
 - Verify backend is running on port 8000
 - Check `VITE_API_URL` in frontend `.env`
 - Ensure CORS is properly configured
+
+## ⚠️ Known Limitations
+
+- **Manual CAPTCHA**: AutoTrader may occasionally require manual CAPTCHA solving (typically on first run or after extended use)
+- **Data Size**: Price predictions work best with 20+ listings in database
+- **Geographic Scope**: Currently optimized for Sudbury, Ontario area only
+- **Site Changes**: AutoTrader HTML structure changes may require scraper updates
+- **Scraping Speed**: Initial data collection takes 2-5 minutes
+- **Alert System**: Price alert notifications require manual implementation (email setup needed)
+
+## ⚙️ Performance Notes
+
+- **Scraping**: Initial data collection: ~2-5 minutes depending on listing count
+- **API Response**: Typical response time < 100ms for `/cars` endpoint
+- **Database**: Queries optimized with indexes on frequently accessed columns
+- **Frontend**: Lazy loading and React optimizations for smooth UX
+- **ML Model**: Training happens on-the-fly, minimal latency (~50ms)
+
+## 🗺️ Roadmap
+
+- [ ] Email notifications for price alerts
+- [ ] Support for additional data sources (Kijiji, Facebook Marketplace)
+- [ ] Mobile-responsive design improvements
+- [ ] Advanced filtering (year range, make, model, body type)
+- [ ] Historical price tracking and trends
+- [ ] Automated CAPTCHA solving
+- [ ] Multi-city support across Canada
+- [ ] User authentication and saved searches
+- [ ] API rate limiting and caching
 
 ## Contributing
 
