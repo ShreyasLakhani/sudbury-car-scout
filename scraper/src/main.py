@@ -24,18 +24,20 @@ def get_driver():
     options.add_argument("--mute-audio")
     return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
-def clean_data(text, type="price"):
+def clean_data(text, field="price"):
     # Extract clean numbers from text
-    if type == "price":
+    if field == "price":
         match = re.search(r'\$[0-9,]+', text)
         return match.group(0) if match else "N/A"
     
     matches = re.findall(r'(\d{1,3}(?:,\d{3})*|\d+)\s*km', text, re.IGNORECASE)
-    if not matches: return "N/A"
+    if not matches:
+        return "N/A"
     try:
         values = [int(m.replace(',', '')) for m in matches]
         return f"{max(values):,} km"
-    except: return "N/A"
+    except ValueError:
+        return "N/A"
 
 def parse_card(soup):
     text = soup.get_text(separator=' ', strip=True)
