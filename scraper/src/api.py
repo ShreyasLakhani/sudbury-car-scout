@@ -10,7 +10,60 @@ import uvicorn
 
 load_dotenv()
 app = FastAPI()
+@app.get("/")
+def read_root():
+    return {"status": "healthy", "service": "Sudbury Car Scout API"}
+@app.get("/cars")
+def get_listings():
+    # 2. CHANGE THIS: Use context managers to prevent connection leaks
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, title, price, mileage, link FROM cars ORDER BY created_at DESC;")
+            rows = cur.fetchall()
+            
+    cars = [{"id": r[0], "title": r[1], "price": r[2], "mileage": r[3], "link": r[4]} for r in rows]
+    
+    # Note: This ML training should ideally be moved to your scraper script.
+    model = analyze_market(cars)
+    if model:
+        for car in cars:
+            try:
+                m_val = float(car['mileage'].replace('km', '').replace(',', ''))
+                p_val = float(car['price'].replace('$', '').replace(',', ''))
+                fair_price = model.predict([[m_val]])[0]
+                diff = fair_price - p_val
+                
+                if diff > 3000: 
+                    car['deal_rating'] = "GREAT DEAL"
+                    car['deal_color'] = "green"
+                elif diff > 500: 
+                    car['deal_rating'] = "GOOD DEAL"
+                    car['deal_color'] = "teal"
+                elif diff < -3000: 
+                    car['deal_rating'] = "OVERPRICED"
+                    car['deal_color'] = "red"
+                else: 
+                    car['deal_rating'] = "FAIR PRICE"
+                    car['deal_color'] = "gray"
+            except (ValueError, KeyError, TypeError) as e:
+                # 3. CHANGE THIS: Catch specific exceptions and log them, don't use bare except
+                print(f"Error processing car {car.get('id')}: {e}")
+                car['deal_rating'] = "UNKNOWN"
+                car['deal_color'] = "gray"
+                
+    return cars
 
+@app.post("/alert")
+def create_alert(alert: Alert):
+    # Use context managers here as well
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO price_alerts (email, target_price, keyword) VALUES (%s, %s, %s)",
+                (alert.email, alert.target_price, alert.keyword)
+            )
+        conn.commit()
+    return {"status": "success"}
 # Configure CORS - use environment variable or sensible defaults
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173,http://localhost:5174").split(",")
 
