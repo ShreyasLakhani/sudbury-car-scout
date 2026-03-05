@@ -10,61 +10,13 @@ import uvicorn
 
 load_dotenv()
 app = FastAPI()
-@app.get("/")
-def read_root():
-    return {"status": "healthy", "service": "Sudbury Car Scout API"}
-@app.get("/cars")
-def get_listings():
-    # 2. CHANGE THIS: Use context managers to prevent connection leaks
-    with get_db() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT id, title, price, mileage, link FROM cars ORDER BY created_at DESC;")
-            rows = cur.fetchall()
-            
-    cars = [{"id": r[0], "title": r[1], "price": r[2], "mileage": r[3], "link": r[4]} for r in rows]
-    
-    # Note: This ML training should ideally be moved to your scraper script.
-    model = analyze_market(cars)
-    if model:
-        for car in cars:
-            try:
-                m_val = float(car['mileage'].replace('km', '').replace(',', ''))
-                p_val = float(car['price'].replace('$', '').replace(',', ''))
-                fair_price = model.predict([[m_val]])[0]
-                diff = fair_price - p_val
-                
-                if diff > 3000: 
-                    car['deal_rating'] = "GREAT DEAL"
-                    car['deal_color'] = "green"
-                elif diff > 500: 
-                    car['deal_rating'] = "GOOD DEAL"
-                    car['deal_color'] = "teal"
-                elif diff < -3000: 
-                    car['deal_rating'] = "OVERPRICED"
-                    car['deal_color'] = "red"
-                else: 
-                    car['deal_rating'] = "FAIR PRICE"
-                    car['deal_color'] = "gray"
-            except (ValueError, KeyError, TypeError) as e:
-                # 3. CHANGE THIS: Catch specific exceptions and log them, don't use bare except
-                print(f"Error processing car {car.get('id')}: {e}")
-                car['deal_rating'] = "UNKNOWN"
-                car['deal_color'] = "gray"
-                
-    return cars
 
-@app.post("/alert")
-def create_alert(alert: Alert):
-    # Use context managers here as well
-    with get_db() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO price_alerts (email, target_price, keyword) VALUES (%s, %s, %s)",
-                (alert.email, alert.target_price, alert.keyword)
-            )
-        conn.commit()
-    return {"status": "success"}
-# Configure CORS - use environment variable or sensible defaults
+# 1. Models and Middleware
+class Alert(BaseModel):
+    email: str
+    target_price: int
+    keyword: str
+
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173,http://localhost:5174").split(",")
 
 app.add_middleware(
@@ -75,11 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class Alert(BaseModel):
-    email: str
-    target_price: int
-    keyword: str
-
+# 2. Helper Functions
 def get_db():
     return psycopg2.connect(os.getenv("DATABASE_URL"))
 
@@ -94,16 +42,21 @@ def analyze_market(cars):
     model.fit(df[['m_val']], df['p_val'])
     return model
 
+# 3. Routes
+@app.get("/")
+def read_root():
+    return {"status": "healthy", "service": "Sudbury Car Scout API"}
+
 @app.get("/cars")
 def get_listings():
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute("SELECT id, title, price, mileage, link FROM cars ORDER BY created_at DESC;")
-    rows = cur.fetchall()
-    conn.close()
-    
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, title, price, mileage, link FROM cars ORDER BY created_at DESC;")
+            rows = cur.fetchall()
+            
     cars = [{"id": r[0], "title": r[1], "price": r[2], "mileage": r[3], "link": r[4]} for r in rows]
     
+    # Architecture note: This is still running synchronously on every page load.
     model = analyze_market(cars)
     if model:
         for car in cars:
@@ -113,24 +66,29 @@ def get_listings():
                 fair_price = model.predict([[m_val]])[0]
                 diff = fair_price - p_val
                 
-                if diff > 3000: car['deal_rating'] = "GREAT DEAL"; car['deal_color'] = "green"
-                elif diff > 500: car['deal_rating'] = "GOOD DEAL"; car['deal_color'] = "teal"
-                elif diff < -3000: car['deal_rating'] = "OVERPRICED"; car['deal_color'] = "red"
-                else: car['deal_rating'] = "FAIR PRICE"; car['deal_color'] = "gray"
-            except: pass
-            
+                if diff > 3000: 
+                    car['deal_rating'], car['deal_color'] = "GREAT DEAL", "green"
+                elif diff > 500: 
+                    car['deal_rating'], car['deal_color'] = "GOOD DEAL", "teal"
+                elif diff < -3000: 
+                    car['deal_rating'], car['deal_color'] = "OVERPRICED", "red"
+                else: 
+                    car['deal_rating'], car['deal_color'] = "FAIR PRICE", "gray"
+            except (ValueError, KeyError, TypeError) as e:
+                print(f"Error processing car {car.get('id')}: {e}")
+                car['deal_rating'], car['deal_color'] = "UNKNOWN", "gray"
+                
     return cars
 
 @app.post("/alert")
 def create_alert(alert: Alert):
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO price_alerts (email, target_price, keyword) VALUES (%s, %s, %s)",
-        (alert.email, alert.target_price, alert.keyword)
-    )
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO price_alerts (email, target_price, keyword) VALUES (%s, %s, %s)",
+                (alert.email, alert.target_price, alert.keyword)
+            )
+        conn.commit()
     return {"status": "success"}
 
 if __name__ == "__main__":
