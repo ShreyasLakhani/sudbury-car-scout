@@ -63,7 +63,7 @@ def get_listings():
             try:
                 m_val = float(car['mileage'].replace('km', '').replace(',', ''))
                 p_val = float(car['price'].replace('$', '').replace(',', ''))
-                fair_price = model.predict([[m_val]])[0]
+                fair_price = model.predict(pd.DataFrame([[m_val]], columns=['m_val']))[0]
                 diff = fair_price - p_val
                 
                 if diff > 3000: 
@@ -92,4 +92,5 @@ def create_alert(alert: Alert):
     return {"status": "success"}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

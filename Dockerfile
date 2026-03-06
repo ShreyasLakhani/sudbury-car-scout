@@ -10,4 +10,4 @@ COPY scraper/src ./src
 
 # Expose API Port
 EXPOSE 8000
-CMD ["python", "src/api.py"]
+CMD ["sh", "-c", "uvicorn src.api:app --host 0.0.0.0 --port ${PORT:-8000}"]
