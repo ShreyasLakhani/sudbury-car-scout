@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.128.0-green.svg)
-![React](https://img.shields.io/badge/React-18+-61dafb.svg)
+![React](https://img.shields.io/badge/React-19+-61dafb.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
 AI-powered car listing aggregator and market analysis tool for Sudbury, Ontario. Scrapes AutoTrader listings, performs machine learning-based price analysis, and provides real-time market insights.
@@ -68,8 +68,7 @@ sudbury-car-scout/
 │   ├── src/
 │   │   ├── main.py        # Web scraper
 │   │   ├── api.py         # FastAPI endpoints
-│   │   ├── db.py          # Database operations
-│   │   └── ml.py          # ML price prediction
+│   │   └── db.py          # Database operations
 │   ├── requirements.txt   # Python dependencies
 │   ├── .env.example       # Environment template
 │   └── Dockerfile         # Backend container

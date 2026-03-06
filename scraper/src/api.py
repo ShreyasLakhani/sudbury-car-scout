@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 import psycopg2
 import os
+import logging
 import pandas as pd
 from dotenv import load_dotenv
 from sklearn.ensemble import RandomForestRegressor
@@ -10,10 +11,11 @@ import uvicorn
 
 load_dotenv()
 app = FastAPI()
+logger = logging.getLogger(__name__)
 
 # 1. Models and Middleware
 class Alert(BaseModel):
-    email: str
+    email: EmailStr
     target_price: int
     keyword: str
 
@@ -33,7 +35,8 @@ def get_db():
 
 def analyze_market(cars):
     df = pd.DataFrame(cars)
-    if len(df) < 5: return None 
+    if len(df) < 5:
+        return None
 
     df['p_val'] = df['price'].astype(str).str.replace(r'[$,]', '', regex=True).astype(float)
     df['m_val'] = df['mileage'].astype(str).str.replace(r'[km,]', '', regex=True).astype(float)
@@ -49,14 +52,16 @@ def read_root():
 
 @app.get("/cars")
 def get_listings():
-    with get_db() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT id, title, price, mileage, link FROM cars ORDER BY created_at DESC;")
-            rows = cur.fetchall()
-            
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id, title, price, mileage, link FROM cars ORDER BY created_at DESC;")
+        rows = cur.fetchall()
+    finally:
+        conn.close()
+    
     cars = [{"id": r[0], "title": r[1], "price": r[2], "mileage": r[3], "link": r[4]} for r in rows]
     
-    # Architecture note: This is still running synchronously on every page load.
     model = analyze_market(cars)
     if model:
         for car in cars:
@@ -66,29 +71,35 @@ def get_listings():
                 fair_price = model.predict(pd.DataFrame([[m_val]], columns=['m_val']))[0]
                 diff = fair_price - p_val
                 
-                if diff > 3000: 
-                    car['deal_rating'], car['deal_color'] = "GREAT DEAL", "green"
-                elif diff > 500: 
-                    car['deal_rating'], car['deal_color'] = "GOOD DEAL", "teal"
-                elif diff < -3000: 
-                    car['deal_rating'], car['deal_color'] = "OVERPRICED", "red"
-                else: 
-                    car['deal_rating'], car['deal_color'] = "FAIR PRICE", "gray"
+                if diff > 3000:
+                    car['deal_rating'] = "GREAT DEAL"
+                    car['deal_color'] = "green"
+                elif diff > 500:
+                    car['deal_rating'] = "GOOD DEAL"
+                    car['deal_color'] = "teal"
+                elif diff < -3000:
+                    car['deal_rating'] = "OVERPRICED"
+                    car['deal_color'] = "red"
+                else:
+                    car['deal_rating'] = "FAIR PRICE"
+                    car['deal_color'] = "gray"
             except (ValueError, KeyError, TypeError) as e:
-                print(f"Error processing car {car.get('id')}: {e}")
-                car['deal_rating'], car['deal_color'] = "UNKNOWN", "gray"
-                
+                logger.warning("Skipping car deal analysis: %s", e)
+            
     return cars
 
 @app.post("/alert")
 def create_alert(alert: Alert):
-    with get_db() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO price_alerts (email, target_price, keyword) VALUES (%s, %s, %s)",
-                (alert.email, alert.target_price, alert.keyword)
-            )
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO price_alerts (email, target_price, keyword) VALUES (%s, %s, %s)",
+            (alert.email, alert.target_price, alert.keyword)
+        )
         conn.commit()
+    finally:
+        conn.close()
     return {"status": "success"}
 
 if __name__ == "__main__":
