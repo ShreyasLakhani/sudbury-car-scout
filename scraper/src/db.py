@@ -32,7 +32,12 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
-    
+
+    # Indexes for common query patterns
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_cars_created_at ON cars (created_at DESC);")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_cars_title ON cars USING gin(to_tsvector('english', title));")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_alerts_email ON price_alerts (email);")
+
     conn.commit()
     conn.close()
 
