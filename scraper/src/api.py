@@ -22,6 +22,7 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel, EmailStr, Field
 from sklearn.ensemble import RandomForestRegressor
 
@@ -205,6 +206,12 @@ def _deal_rating(diff: float) -> tuple[str, str]:
 def read_root():
     """Root endpoint — basic service status."""
     return {"status": "healthy", "service": "Sudbury Car Scout API"}
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Return empty response for browser favicon requests."""
+    return Response(status_code=204)
 
 
 @app.get("/health")
