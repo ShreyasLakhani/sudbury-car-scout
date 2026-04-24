@@ -54,6 +54,7 @@ Thumbs.db
 cars.json
 scraper/cars.json
 *.log
+logs/
 
 # --- Temporary files ---
 *.tmp

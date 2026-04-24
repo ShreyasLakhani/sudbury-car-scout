@@ -1,42 +1,377 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+/* ============================================================
+   Sudbury Car Scout AI — Component Styles
+   Premium dark glassmorphism with micro-animations
+   ============================================================ */
+
+/* --- App Container --- */
+.app-container {
+  background: var(--bg-primary);
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Ambient background glow */
+.app-container::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(99, 102, 241, 0.06) 0%,
+    transparent 50%
+  ),
+  radial-gradient(
+    ellipse at 70% 80%,
+    rgba(34, 211, 238, 0.04) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* --- Hero Header --- */
+.hero-header {
+  background: var(--gradient-hero);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 2rem 0;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--gradient-primary);
+  opacity: 0.4;
+}
+
+.hero-title {
+  font-size: 2rem;
+  font-weight: 800;
+  background: var(--gradient-primary);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 6s ease infinite;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.hero-subtitle {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 400;
+  margin-top: 0.25rem;
+  letter-spacing: 0.02em;
+}
+
+.alert-btn {
+  background: var(--gradient-primary) !important;
+  border: none !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em;
+  padding: 0.6rem 1.5rem !important;
+  transition: all var(--transition-normal) !important;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+}
+
+.alert-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(99, 102, 241, 0.45) !important;
+}
+
+/* --- Stat Cards --- */
+.stats-grid {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.stat-card {
+  background: var(--bg-card) !important;
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-subtle) !important;
+  padding: 1.25rem !important;
+  transition: all var(--transition-normal) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--gradient-primary);
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.stat-card:hover {
+  border-color: var(--border-glow) !important;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.stat-card:hover::before {
+  opacity: 1;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+}
+
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* --- Filter Bar --- */
+.filter-bar {
+  background: var(--bg-card) !important;
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-subtle) !important;
+  padding: 1.25rem !important;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.search-btn {
+  background: var(--gradient-primary) !important;
+  border: none !important;
+  font-weight: 600 !important;
+  min-width: 100px;
+  transition: all var(--transition-normal) !important;
+}
+
+.search-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+}
+
+/* --- Chart Panel --- */
+.chart-panel {
+  background: var(--bg-card) !important;
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-subtle) !important;
+  animation: fadeInUp 0.7s ease-out;
+  overflow: hidden;
+}
+
+.chart-title {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* --- Car Cards --- */
+.car-card {
+  background: var(--bg-card) !important;
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-subtle) !important;
+  transition: all var(--transition-smooth) !important;
+  animation: fadeInUp 0.5s ease-out both;
+  cursor: default;
+  overflow: hidden;
+  position: relative;
+}
+
+.car-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.03) 0%,
+    transparent 50%
+  );
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.car-card:hover {
+  border-color: var(--border-glow) !important;
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md), var(--shadow-glow);
+}
+
+.car-card:hover::before {
+  opacity: 1;
+}
+
+/* Stagger animation for card grid */
+.car-card:nth-child(1) { animation-delay: 0.05s; }
+.car-card:nth-child(2) { animation-delay: 0.1s; }
+.car-card:nth-child(3) { animation-delay: 0.15s; }
+.car-card:nth-child(4) { animation-delay: 0.2s; }
+.car-card:nth-child(5) { animation-delay: 0.25s; }
+.car-card:nth-child(6) { animation-delay: 0.3s; }
+.car-card:nth-child(7) { animation-delay: 0.35s; }
+.car-card:nth-child(8) { animation-delay: 0.4s; }
+.car-card:nth-child(9) { animation-delay: 0.45s; }
+.car-card:nth-child(10) { animation-delay: 0.5s; }
+.car-card:nth-child(11) { animation-delay: 0.55s; }
+.car-card:nth-child(12) { animation-delay: 0.6s; }
+
+.car-title {
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text-primary);
+  min-height: 50px;
+}
+
+.car-mileage {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+/* Deal rating badges */
+.deal-badge-great {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+  color: white !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.deal-badge-good {
+  background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%) !important;
+  color: white !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.deal-badge-fair {
+  background: rgba(100, 100, 120, 0.3) !important;
+  color: var(--text-secondary) !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.deal-badge-overpriced {
+  background: linear-gradient(135deg, #dc2626 0%, #f43f5e 100%) !important;
+  color: white !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.price-badge {
+  background: rgba(99, 102, 241, 0.15) !important;
+  color: #a5b4fc !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
+}
+
+.view-btn {
+  background: transparent !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+  font-weight: 600 !important;
+  transition: all var(--transition-normal) !important;
+}
+
+.view-btn:hover {
+  background: var(--gradient-primary) !important;
+  border-color: transparent !important;
+  transform: translateY(-1px);
+}
+
+/* --- Skeleton Loading --- */
+.skeleton-card {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--radius-lg) !important;
+  overflow: hidden;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 25%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.02) 75%
+  ) !important;
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* --- Pagination --- */
+.pagination-wrapper {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* --- Error State --- */
+.error-alert {
+  background: rgba(244, 63, 94, 0.1) !important;
+  border: 1px solid rgba(244, 63, 94, 0.2) !important;
+  border-radius: var(--radius-lg) !important;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* --- Alert Modal --- */
+.modal-alert-error {
+  background: rgba(244, 63, 94, 0.1) !important;
+  border: 1px solid rgba(244, 63, 94, 0.25) !important;
+}
+
+/* --- Empty State --- */
+.empty-state {
   text-align: center;
+  padding: 4rem 2rem;
+  animation: fadeIn 0.5s ease-out;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  animation: float 3s ease-in-out infinite;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 1.5rem;
   }
-  to {
-    transform: rotate(360deg);
-  }
-}
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+  .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .hero-header {
+    padding: 1.5rem 0;
   }
 }
 
-.card {
-  padding: 2em;
-}
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 1.25rem;
+  }
 
-.read-the-docs {
-  color: #888;
+  .stat-value {
+    font-size: 1.1rem;
+  }
 }

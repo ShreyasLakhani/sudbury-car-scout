@@ -1,0 +1,30 @@
+[Unit]
+Description=Car Scout AI Backend — Sudbury Car Market Analysis
+Documentation=https://github.com/ShreyasLakhani/sudbury-car-scout
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/car-scout
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/opt/car-scout/.env
+
+ExecStartPre=/usr/bin/python3 -m pip install -r requirements.txt --quiet
+ExecStart=/usr/bin/python3 -m uvicorn src.api:app \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --workers 2
+
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=car-scout
+
+[Install]
+WantedBy=multi-user.target

@@ -1,90 +1,124 @@
-import time
+"""
+AutoTrader Scraper for Sudbury Car Listings.
+
+Uses Selenium to navigate AutoTrader, parse car listing cards,
+and output structured JSON data.
+"""
+
+import hashlib
 import json
 import re
+import time
 import urllib.parse
-import hashlib
-import logging
+
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-logging.basicConfig(level=logging.INFO, format='%(message)s')
+from logger import get_logger
 
-TARGET_URL = "https://www.autotrader.ca/cars/on/greater%20sudbury/?rcp=15&rcs=0&srt=39&prx=50&prv=Ontario&loc=Sudbury&hprc=True&wcp=True&inMarket=advancedSearch"
+log = get_logger("scraper")
+
+TARGET_URL = (
+    "https://www.autotrader.ca/cars/on/greater%20sudbury/"
+    "?rcp=15&rcs=0&srt=39&prx=50&prv=Ontario&loc=Sudbury"
+    "&hprc=True&wcp=True&inMarket=advancedSearch"
+)
 OUTPUT_FILE = "cars.json"
 
+
 def get_driver():
-    # Setup Chrome with anti-detection options
+    """Setup Chrome with anti-detection options."""
     options = Options()
     options.add_argument("--start-maximized")
-    options.add_argument("--disable-blink-features=AutomationControlled") 
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    )
     options.add_argument("--mute-audio")
-    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    return webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()), options=options
+    )
+
 
 def clean_data(text, field="price"):
-    # Extract clean numbers from text
+    """Extract clean numbers from text."""
     if field == "price":
-        match = re.search(r'\$[0-9,]+', text)
+        match = re.search(r"\$[0-9,]+", text)
         return match.group(0) if match else "N/A"
-    
-    matches = re.findall(r'(\d{1,3}(?:,\d{3})*|\d+)\s*km', text, re.IGNORECASE)
+
+    matches = re.findall(r"(\d{1,3}(?:,\d{3})*|\d+)\s*km", text, re.IGNORECASE)
     if not matches:
         return "N/A"
     try:
-        values = [int(m.replace(',', '')) for m in matches]
+        values = [int(m.replace(",", "")) for m in matches]
         return f"{max(values):,} km"
     except ValueError:
         return "N/A"
 
+
 def parse_card(soup):
-    text = soup.get_text(separator=' ', strip=True)
+    """Parse a single car listing card from BeautifulSoup element."""
+    text = soup.get_text(separator=" ", strip=True)
     data = {}
 
     # 1. Basic Info
-    data['price'] = clean_data(text, "price")
-    data['mileage'] = clean_data(text, "mileage")
-    
+    data["price"] = clean_data(text, "price")
+    data["mileage"] = clean_data(text, "mileage")
+
     # 2. Find Title
-    title_tag = soup.find(['h2', 'span'], class_=lambda x: x and ('title' in x.lower() or 'make-model' in x.lower()))
-    data['title'] = title_tag.get_text(strip=True) if title_tag else "N/A"
-    
+    title_tag = soup.find(
+        ["h2", "span"],
+        class_=lambda x: x and ("title" in x.lower() or "make-model" in x.lower()),
+    )
+    data["title"] = title_tag.get_text(strip=True) if title_tag else "N/A"
+
     # Fallback if title is missing
-    if data['title'] == "N/A":
-        match = re.search(r'(19|20)\d{2}\s+[A-Za-z]{3,}', text)
-        if match: data['title'] = match.group(0)
+    if data["title"] == "N/A":
+        match = re.search(r"(19|20)\d{2}\s+[A-Za-z]{3,}", text)
+        if match:
+            data["title"] = match.group(0)
 
     # 3. Create Fallback Link (Google Search)
     # This ensures the button always works, even if AutoTrader hides the link.
     search_query = f"{data['title']} Sudbury AutoTrader"
     safe_query = urllib.parse.quote(search_query)
-    unique_ref = hashlib.md5((data['title'] + data['price']).encode()).hexdigest()[:10]
-    data['link'] = f"https://www.google.com/search?q={safe_query}&ref={unique_ref}"
+    unique_ref = hashlib.md5(
+        (data["title"] + data["price"]).encode()
+    ).hexdigest()[:10]
+    data["link"] = f"https://www.google.com/search?q={safe_query}&ref={unique_ref}"
 
     return data
 
+
 def run_scraper():
+    """Run the full AutoTrader scraping pipeline."""
     driver = get_driver()
     try:
-        logging.info("🚀 Launching Browser...")
+        log.info("Launching browser — navigating to AutoTrader")
         driver.get(TARGET_URL)
 
-        print("\n" + "="*40)
+        print("\n" + "=" * 40)
         print(" ACTION REQUIRED: Solve Captcha")
         print(" Press ENTER in this terminal when list loads.")
-        print("="*40 + "\n")
+        print("=" * 40 + "\n")
         input("Press Enter to continue...")
 
-        logging.info("📜 Scrolling to load more cars...")
+        log.info("Scrolling page to load more listings")
         driver.execute_script("window.scrollTo(0, 2500);")
         time.sleep(3)
 
-        logging.info("🔍 Parsing data...")
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        seeds = soup.find_all("div", class_=lambda x: x and ("re-layout-inner" in x or "listing-details" in x))
-        
+        log.info("Parsing page source for car listings")
+        soup = BeautifulSoup(driver.page_source, "html.parser")
+        seeds = soup.find_all(
+            "div",
+            class_=lambda x: x
+            and ("re-layout-inner" in x or "listing-details" in x),
+        )
+
         results = []
         seen = set()
 
@@ -96,29 +130,33 @@ def run_scraper():
                 if "$" in context.get_text():
                     found_dollar = True
                     break
-                if context.parent: context = context.parent
-            
-            if not found_dollar: continue
+                if context.parent:
+                    context = context.parent
+
+            if not found_dollar:
+                continue
 
             item = parse_card(context)
 
             # Save valid cars
-            if item['title'] != "N/A" and item['price'] != "N/A":
+            if item["title"] != "N/A" and item["price"] != "N/A":
                 sig = f"{item['title']}-{item['price']}"
                 if sig not in seen:
                     results.append(item)
                     seen.add(sig)
-                    print(f" [+] Found: {item['title']} | {item['price']}")
+                    log.info("Found: %s | %s", item["title"], item["price"])
 
-        with open(OUTPUT_FILE, "w") as f:
+        with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2)
-        
-        logging.info(f"✅ Success! Saved {len(results)} cars.")
+
+        log.info("Scrape complete — saved %d cars to %s", len(results), OUTPUT_FILE)
 
     except Exception as e:
-        logging.error(f"❌ Error: {e}")
+        log.error("Scraper failed: %s", e, exc_info=True)
     finally:
         driver.quit()
+        log.info("Browser closed")
+
 
 if __name__ == "__main__":
     run_scraper()

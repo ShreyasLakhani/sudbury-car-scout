@@ -11,6 +11,7 @@ AI-powered car listing aggregator and market analysis tool for Sudbury, Ontario.
 
 - **Frontend**: https://sudbury-car-scout-nnmp.vercel.app
 - **API Endpoint**: https://sudbury-car-scout-production.up.railway.app/cars
+- **Health Check**: https://sudbury-car-scout-production.up.railway.app/health
 - **Status**: ✅ Production Ready
 
 ## Features
@@ -18,8 +19,14 @@ AI-powered car listing aggregator and market analysis tool for Sudbury, Ontario.
 - **Web Scraping**: Automated scraping from AutoTrader for Sudbury area
 - **AI Price Analysis**: Random Forest ML model for fair price prediction
 - **Market Visualization**: Interactive scatter plots showing price vs mileage correlation
-- **Price Alerts**: Set notifications for specific cars below target prices
+- **Market Statistics**: Real-time analytics (avg price, median, mileage, price range)
+- **Search & Filters**: Keyword search, price range filters, sorting options
+- **Pagination**: Efficient paginated browsing of all listings
+- **Price Alerts**: Set notifications for specific cars below target prices (rate-limited)
 - **Deal Detection**: Automatic classification of listings (Great Deal, Fair Price, Overpriced)
+- **Health Monitoring**: `/health` endpoint for system diagnostics
+- **Structured Logging**: Formatted logs across all components (API, scraper, DB)
+- **Production Ready**: Docker Compose with bridge networking, systemd support
 
 ## ⚡ Quick Start
 
@@ -53,12 +60,14 @@ npm run dev
 
 ### Frontend
 - **React + Vite**: Modern frontend framework
-- **Mantine UI**: Component library
+- **Mantine UI**: Component library (dark theme)
 - **Recharts**: Data visualization
 
 ### DevOps
-- **Docker**: Containerization ready
-- **pytest**: Automated testing
+- **Docker Compose**: Multi-container orchestration with bridge networking
+- **systemd**: Linux service management
+- **pytest**: 22 automated tests
+- **Structured Logging**: Rotating file + stream handlers
 
 ## Project Structure
 
@@ -67,20 +76,25 @@ sudbury-car-scout/
 ├── scraper/                # Backend & scraping logic
 │   ├── src/
 │   │   ├── main.py        # Web scraper
-│   │   ├── api.py         # FastAPI endpoints
-│   │   └── db.py          # Database operations
+│   │   ├── api.py         # FastAPI endpoints (v2.0)
+│   │   ├── db.py          # Database operations + indexes
+│   │   └── logger.py      # Structured logging module
 │   ├── requirements.txt   # Python dependencies
-│   ├── .env.example       # Environment template
-│   └── Dockerfile         # Backend container
+│   └── .env.example       # Environment template
 ├── frontend/              # React application
 │   ├── src/
-│   │   ├── App.jsx        # Main component
-│   │   └── main.jsx       # Entry point
-│   ├── package.json       # Node dependencies
-│   └── .env.example       # Frontend environment template
-├── tests/                 # Test suite
+│   │   ├── App.jsx        # Main component (dark theme)
+│   │   ├── App.css        # Premium component styles
+│   │   ├── index.css      # Design system & globals
+│   │   └── main.jsx       # Entry point + theme config
+│   ├── index.html         # SEO-optimized HTML
+│   └── package.json       # Node dependencies
+├── tests/                 # Test suite (22 tests)
 │   └── test_api.py        # API tests
-└── docker-compose.yml     # Multi-container setup
+├── car-scout.service      # systemd unit file
+├── docker-compose.yml     # Multi-container setup
+├── Dockerfile             # Backend container
+└── README.md
 ```
 
 ## Installation & Setup
@@ -95,7 +109,7 @@ sudbury-car-scout/
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/sudbury-car-scout.git
+git clone https://github.com/ShreyasLakhani/sudbury-car-scout.git
 cd sudbury-car-scout
 ```
 
@@ -172,32 +186,76 @@ python src/main.py
 ## Usage
 
 1. **View Listings**: Open http://localhost:5173 to see all scraped car listings
-2. **Market Analysis**: View the interactive scatter chart showing price vs mileage trends
-3. **Set Alerts**: Click "Set Price Alert" to get notified when cars matching your criteria appear
-4. **Deal Detection**: Each listing shows an AI-powered badge (Great Deal, Fair Price, Overpriced)
+2. **Search & Filter**: Use the filter bar to search by model, set price ranges, and sort
+3. **Market Analysis**: View the interactive scatter chart showing price vs mileage trends
+4. **Market Stats**: See aggregate analytics (avg price, median, avg mileage)
+5. **Set Alerts**: Click "Set Price Alert" to get notified when cars matching your criteria appear
+6. **Deal Detection**: Each listing shows an AI-powered badge (Great Deal, Fair Price, Overpriced)
 
 ## API Endpoints
 
-### `GET /cars`
-Returns all car listings with AI analysis
+### `GET /health`
+System diagnostics — database, model, and uptime status.
 
 **Response:**
 ```json
-[
-  {
-    "id": 1,
-    "title": "2018 Honda Civic LX",
-    "price": "$15,900",
-    "mileage": "85,000 km",
-    "link": "https://...",
-    "deal_rating": "GREAT DEAL",
-    "deal_color": "green"
-  }
-]
+{
+  "status": "ok",
+  "db": "ok",
+  "model": "available",
+  "uptime_seconds": 3421,
+  "version": "2.0.0"
+}
+```
+
+### `GET /cars`
+Returns paginated car listings with AI analysis.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `keyword` | string | `""` | Filter by title (case-insensitive) |
+| `min_price` | int | `0` | Minimum price filter |
+| `max_price` | int | `0` | Maximum price filter |
+| `page` | int | `1` | Page number (1-indexed) |
+| `limit` | int | `20` | Results per page (max 100) |
+
+**Response:**
+```json
+{
+  "cars": [
+    {
+      "id": 1,
+      "title": "2018 Honda Civic LX",
+      "price": "$15,900",
+      "mileage": "85,000 km",
+      "link": "https://...",
+      "deal_rating": "GREAT DEAL",
+      "deal_color": "green"
+    }
+  ],
+  "total": 42,
+  "page": 1,
+  "limit": 20
+}
+```
+
+### `GET /stats`
+Market analytics — aggregate statistics across all listings.
+
+**Response:**
+```json
+{
+  "total_listings": 42,
+  "avg_price": 21500.50,
+  "median_price": 19000.00,
+  "avg_mileage": 75000.25,
+  "price_range": { "min": 8000, "max": 45000 }
+}
 ```
 
 ### `POST /alert`
-Create a price alert
+Create a price alert (rate-limited: 5/hour per IP).
 
 **Request:**
 ```json
@@ -208,29 +266,34 @@ Create a price alert
 }
 ```
 
-**Response:**
+**Validation Rules:**
+- `email`: Must be valid email format
+- `target_price`: 500–500,000
+- `keyword`: 1–100 characters
+
+**Response (201):**
 ```json
 {
-  "status": "success"
+  "status": "success",
+  "message": "Alert created. You will be notified when a match appears."
 }
 ```
 
 ## Testing
 
 ```bash
-# Run backend tests (from project root)
+# Run all tests (from project root)
 pytest tests/test_api.py -v
 
 # Run with coverage
 pytest --cov=scraper.src tests/
+
+# Expected: 22 tests passed
 ```
 
 ## Deployment
 
-### Option 1: Local Development
-Follow the installation steps above.
-
-### Option 2: Docker (Recommended for Production)
+### Option 1: Docker Compose (Recommended)
 
 ```bash
 # Build and run all services
@@ -238,6 +301,31 @@ docker-compose up --build
 
 # Run in detached mode
 docker-compose up -d
+
+# Check network isolation
+docker network inspect sudbury-car-scout_carscout-net
+
+# Run scraper (one-off)
+docker-compose --profile scrape run scraper
+```
+
+### Option 2: Linux Deployment (systemd)
+
+Run as a persistent background service via systemd:
+
+```bash
+# Copy service file
+sudo cp car-scout.service /etc/systemd/system/
+
+# Enable and start
+sudo systemctl enable car-scout
+sudo systemctl start car-scout
+
+# Follow logs
+sudo journalctl -u car-scout -f
+
+# Check status
+sudo systemctl status car-scout
 ```
 
 ### Option 3: Cloud Deployment
@@ -286,6 +374,10 @@ CREATE TABLE cars (
     link TEXT UNIQUE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Performance indexes
+CREATE INDEX idx_cars_created_at ON cars (created_at DESC);
+CREATE INDEX idx_cars_title ON cars USING gin(to_tsvector('english', title));
 ```
 
 ### `price_alerts` Table
@@ -297,6 +389,8 @@ CREATE TABLE price_alerts (
     keyword TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_alerts_email ON price_alerts (email);
 ```
 
 ## Machine Learning Model
@@ -344,10 +438,15 @@ VITE_API_URL=http://localhost:8000
 - You may need to manually solve captchas
 - Run with `python src/main.py` and monitor console output
 
-### Frontend Can't Connect to API
-- Verify backend is running on port 8000
+### Frontend "Failed to fetch" Error
+- **Most common cause**: The backend API server is not running. Start it with `python src/api.py`
+- Verify backend is running on port 8000 (`http://localhost:8000/health`)
 - Check `VITE_API_URL` in frontend `.env`
 - Ensure CORS is properly configured
+
+### `email-validator is not installed` Error
+- Run: `pip install 'pydantic[email]'`
+- This installs the `email-validator` package required by Pydantic's `EmailStr` type
 
 ## ⚠️ Known Limitations
 
@@ -363,20 +462,21 @@ VITE_API_URL=http://localhost:8000
 - **Scraping**: Initial data collection: ~2-5 minutes depending on listing count
 - **API Response**: Typical response time < 100ms for `/cars` endpoint
 - **Database**: Queries optimized with indexes on frequently accessed columns
-- **Frontend**: Lazy loading and React optimizations for smooth UX
+- **Frontend**: Debounced search, memoized sorting, skeleton loading for smooth UX
 - **ML Model**: Training happens on-the-fly, minimal latency (~50ms)
 
 ## 🗺️ Roadmap
 
 - [ ] Email notifications for price alerts
 - [ ] Support for additional data sources (Kijiji, Facebook Marketplace)
-- [ ] Mobile-responsive design improvements
-- [ ] Advanced filtering (year range, make, model, body type)
+- [x] ~~Advanced filtering (price range, keyword search, sorting)~~
+- [x] ~~API rate limiting~~
+- [x] ~~Structured logging~~
+- [x] ~~Health check endpoint~~
 - [ ] Historical price tracking and trends
 - [ ] Automated CAPTCHA solving
 - [ ] Multi-city support across Canada
 - [ ] User authentication and saved searches
-- [ ] API rate limiting and caching
 
 ## Contributing
 
