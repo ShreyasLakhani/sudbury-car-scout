@@ -71,7 +71,8 @@ class Alert(BaseModel):
 
 _raw_origins = os.getenv(
     "ALLOWED_ORIGINS",
-    "http://localhost:3000,http://localhost:5173,http://localhost:5174",
+    "http://localhost:3000,http://localhost:5173,http://localhost:5174,"
+    "https://shreycarscout.vercel.app",
 )
 allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
