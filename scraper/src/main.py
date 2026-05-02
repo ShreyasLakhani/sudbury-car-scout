@@ -17,7 +17,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-from logger import get_logger
+from .logger import get_logger
 
 log = get_logger("scraper")
 

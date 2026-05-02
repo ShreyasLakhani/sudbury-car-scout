@@ -26,7 +26,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, EmailStr, Field
 from sklearn.ensemble import RandomForestRegressor
 
-from logger import get_logger
+from .logger import get_logger
 
 load_dotenv()
 
