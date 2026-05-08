@@ -402,11 +402,13 @@ The application uses a **Random Forest Regressor** to predict fair market prices
 3. Predicts expected price for each vehicle
 4. Compares predicted vs actual price to classify deals
 
-**Deal Classification:**
-- Great Deal: $3000+ below predicted price
-- Good Deal: $500-$3000 below predicted price
-- Fair Price: Within $500 of predicted price
-- Overpriced: $3000+ above predicted price
+> **v1 scope:** The model currently uses mileage as its sole feature. The next iteration will parse year and make from listing titles as additional features. The simpler version was shipped first to validate the full pipeline (scrape → store → train → predict → display) before optimizing model accuracy.
+
+**Deal Classification** (where *diff = predicted − actual*):
+- **Great Deal**: diff > $3,000 (priced well below predicted value)
+- **Good Deal**: diff $500–$3,000 below predicted
+- **Fair Price**: diff between −$3,000 and +$500 (near or slightly above predicted value)
+- **Overpriced**: diff < −$3,000 (priced $3,000+ above predicted value)
 
 ## Environment Variables
 
@@ -456,6 +458,7 @@ VITE_API_URL=http://localhost:8000
 - **Site Changes**: AutoTrader HTML structure changes may require scraper updates
 - **Scraping Speed**: Initial data collection takes 2-5 minutes
 - **Alert System**: Price alert notifications require manual implementation (email setup needed)
+- **Single-Feature Model**: Price prediction uses mileage only; adding year and make from listing titles is the planned next iteration
 
 ## ⚙️ Performance Notes
 
